@@ -19,6 +19,12 @@ def data_descaler(data, max_data, min_data):
     data = (max_data - min_data)*data + min_data
     return data
 
+#data descaler in real space
+def data_descaler_real(data, max_data, min_data):
+    data = (max_data - min_data)*data + min_data
+    return 1e1**data
+
+
 N_data = 53
 
 parser = argparse.ArgumentParser(description="train or predict.")
@@ -81,7 +87,7 @@ model.compile("adam", lr=0.001, metrics=["mean l2 relative error"])
 
 if args.mode == "train":
 
-    losshistory, train_state = model.train(iterations=30000)
+    losshistory, train_state = model.train(iterations=60000)
     model.compile("L-BFGS")
     losshistory, train_state = model.train()
 
@@ -94,13 +100,16 @@ if args.mode == "train":
 
 elif args.mode == "predict":
 
-    eps = 0.1 # tolerance in log
+    eps = 0.1  # Tolerance for relative differences
 
-    model.restore('model_mesa/model-46109.ckpt', verbose=1)
+    # Restore the model checkpoint
+    model.restore('model_mesa/model-76336.ckpt', verbose=1)
 
+    # Make predictions
     y_pred = model.predict(X_train)
 
-    colormap = plt.cm.jet
+    # Use a scientific colormap (e.g., viridis for better visibility in publications)
+    colormap = plt.cm.viridis
     colors = [colormap(i) for i in np.linspace(0, 1, 53)]
 
     # Plot for mass
@@ -108,25 +117,51 @@ elif args.mode == "predict":
 
     for i in range(N_data):
         # Main plot: predictions vs true values for mass
-        axs[0].plot(timesteps, data_descaler(y_pred[i,:,0], max_mass, min_mass), lw=2, color=colors[i])
-        axs[0].plot(timesteps, data_descaler(y_train[i,:,0], max_mass, min_mass), lw=3, color=colors[i], ls=':')
+        axs[0].plot(
+            timesteps,
+            data_descaler(y_pred[i, :, 0], max_mass, min_mass),
+            lw=1.5,
+            color=colors[i],
+            label=f"Sample {i+1}" if i < 10 else "_nolegend_"  # Limit legend clutter
+        )
+        axs[0].plot(
+            timesteps,
+            data_descaler(y_train[i, :, 0], max_mass, min_mass),
+            lw=1.5,
+            color=colors[i],
+            linestyle='--'
+        )
 
         # Subplot: relative differences
-        relative_diff = (data_descaler(y_pred[i,:,0], max_mass, min_mass) - data_descaler(y_train[i,:,0], max_mass, min_mass)) \
-                        / (data_descaler(y_train[i,:,0], max_mass, min_mass) + eps) 
-        axs[1].plot(timesteps, relative_diff, lw=2, color=colors[i])
+        relative_diff = (
+            data_descaler_real(y_pred[i, :, 0], max_mass, min_mass) -
+            data_descaler_real(y_train[i, :, 0], max_mass, min_mass)
+        ) / (data_descaler_real(y_train[i, :, 0], max_mass, min_mass) + eps)
 
-    # Finalize mass plot
-    axs[0].set_ylabel('Log(Msun)')
-    axs[0].set_xlabel('Evolution stage')
-    axs[0].set_title('Mass Prediction vs True')
+        axs[1].plot(timesteps, relative_diff, lw=1.5, color=colors[i])
 
-    axs[1].set_ylabel('Rel. Diff.')
-    axs[1].set_xlabel('Evolution stage')
-    axs[1].axhline(0, color='black', lw=1, ls='--')
+    # Customize the main mass plot
+    axs[0].set_ylabel(r'Log($M_{\odot}$)', fontsize=14)  # Use LaTeX for labels
+    axs[0].set_xlabel('Evolution stage', fontsize=14)
+    axs[0].set_title('Mass Prediction vs True', fontsize=16)
+    axs[0].grid(visible=True, linestyle='--', linewidth=0.5)
+    #axs[0].set_xlim(0.7) # optional
 
+    handles = [
+    plt.Line2D([0], [0], color='black', lw=1.5, label='Predicted (solid)'),
+    plt.Line2D([0], [0], color='black', lw=1.5, linestyle='--', label='True (dashed)')]
+
+    axs[0].legend(handles=handles, loc='lower left', fontsize=12)
+
+    # Customize the relative difference subplot
+    axs[1].set_ylabel('Relative Difference', fontsize=12)
+    axs[1].set_xlabel('Evolution stage', fontsize=14)
+    axs[1].axhline(0, color='black', lw=1, linestyle='--')
+    axs[1].grid(visible=True, linestyle='--', linewidth=0.5)
+    #axs[1].set_xlim(0.7) # optional
+    # Adjust layout and save figure
     plt.tight_layout()
-    plt.savefig('./plots/pred_vs_true_mass.png')
+    plt.savefig('./plots/pred_vs_true_mass_zoom.png', dpi=300)  # Save with high resolution
     plt.close()
 
     # Plot for radius
@@ -134,25 +169,79 @@ elif args.mode == "predict":
 
     for i in range(N_data):
         # Main plot: predictions vs true values for radius
-        axs[0].plot(timesteps, data_descaler(y_pred[i,:,1], max_radius, min_radius), lw=2, color=colors[i])
-        axs[0].plot(timesteps, data_descaler(y_train[i,:,1], max_radius, min_radius), lw=3, color=colors[i], ls=':')
+        axs[0].plot(
+            timesteps,
+            data_descaler(y_pred[i, :, 1], max_radius, min_radius),
+            lw=1.5,
+            color=colors[i],
+            label=f"Sample {i+1}" if i < 10 else "_nolegend_"
+        )
+        axs[0].plot(
+            timesteps,
+            data_descaler(y_train[i, :, 1], max_radius, min_radius),
+            lw=1.5,
+            color=colors[i],
+            linestyle='--'
+        )
 
-        # Subplot: relative differences
-        relative_diff = (data_descaler(y_pred[i,:,1], max_radius, min_radius) - data_descaler(y_train[i,:,1], max_radius, min_radius)) \
-                        / (data_descaler(y_train[i,:,1], max_radius, min_radius) + eps)
-        axs[1].plot(timesteps, relative_diff, lw=2, color=colors[i])
+        # Subplot: relative differences in real space
+        relative_diff = (
+            data_descaler_real(y_pred[i, :, 1], max_radius, min_radius) -
+            data_descaler_real(y_train[i, :, 1], max_radius, min_radius)
+        ) / (data_descaler_real(y_train[i, :, 1], max_radius, min_radius) + eps)
 
-    # Finalize radius plot
-    axs[0].set_ylabel('Log(Rsun)')
-    axs[0].set_xlabel('Evolution stage')
-    axs[0].set_title('Radius Prediction vs True')
+        axs[1].plot(timesteps, relative_diff, lw=1.5, color=colors[i])
+        
+    # Customize the main radius plot
+    axs[0].set_ylabel(r'Log($R_{\odot}$)', fontsize=14)
+    axs[0].set_xlabel('Evolution stage', fontsize=14)
+    axs[0].set_title('Radius Prediction vs True', fontsize=16)
+    axs[0].grid(visible=True, linestyle='--', linewidth=0.5)
 
-    axs[1].set_ylabel('Rel. Diff.')
-    axs[1].set_xlabel('Evolution stage')
-    axs[1].axhline(0, color='black', lw=1, ls='--')
+    handles = [
+    plt.Line2D([0], [0], color='black', lw=1.5, label='Predicted (solid)'),
+    plt.Line2D([0], [0], color='black', lw=1.5, linestyle='--', label='True (dashed)')]
 
+    axs[0].legend(handles=handles, loc='lower left', fontsize=12)
+    #axs[0].set_xlim(0.7) #optional
+    # Customize the relative difference subplot
+    axs[1].set_ylabel('Relative Difference', fontsize=12)
+    axs[1].set_xlabel('Evolution stage', fontsize=14)
+    axs[1].axhline(0, color='black', lw=1, linestyle='--')
+    axs[1].grid(visible=True, linestyle='--', linewidth=0.5)
+    #axs[1].set_xlim(0.7) #optional
+    # Adjust layout and save figure
     plt.tight_layout()
-    plt.savefig('./plots/pred_vs_true_radius.png')
+    plt.savefig('./plots/pred_vs_true_radius_zoom.png', dpi=300)
     plt.close()
 
 
+    exit()
+    # Heatmap for average relative differences, optional
+    IC = np.loadtxt(data_dir + '/parameter_space.dat')[:, 1:]
+    avg_relative_diff = np.zeros((len(IC[:,0]), len(IC[:,1])))
+
+    for p1_idx, param1 in enumerate(IC[:,0]):
+        for p2_idx, param2 in enumerate(IC[:,1]):
+            # Compute average relative difference for the given parameter combination
+            avg_diff = 0
+            count = 0
+            for i in range(N_data):
+                relative_diff_mass = (data_descaler(y_pred[i,:,0], max_mass, min_mass) - data_descaler(y_train[i,:,0], max_mass, min_mass)) \
+                                     / (data_descaler(y_train[i,:,0], max_mass, min_mass) + eps)
+                relative_diff_radius = (data_descaler(y_pred[i,:,1], max_radius, min_radius) - data_descaler(y_train[i,:,1], max_radius, min_radius)) \
+                                       / (data_descaler(y_train[i,:,1], max_radius, min_radius) + eps)
+                avg_diff += np.mean(np.abs(relative_diff_mass)) + np.mean(np.abs(relative_diff_radius))
+                count += 1
+            avg_relative_diff[p1_idx, p2_idx] = avg_diff / count
+
+    plt.figure(figsize=(8, 6))
+    plt.imshow(avg_relative_diff, aspect='auto', origin='lower', 
+            extent=[IC[0,0], IC[-1,0], IC[0,1], IC[-1,0]], cmap='inferno')
+    plt.colorbar(label='Avg. Rel. Diff.')
+    plt.xlabel('q')
+    plt.ylabel('ai')
+    plt.title('Heatmap of Avg. Relative Differences')
+    plt.tight_layout()
+    plt.savefig('./plots/heatmap_avg_relative_diff.png')
+    plt.close()
