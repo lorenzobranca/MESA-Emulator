@@ -1,4 +1,4 @@
-# DeepXDE MESA Emulator
+# DeepXDE MESA Emulator for binaries evolution
 
 This project provides a neural network-based emulator for the MESA (Modules for Experiments in Stellar Astrophysics) code using DeepXDE. The emulator predicts stellar parameters (mass and radius) across evolutionary stages and analyzes their relative differences from ground truth values.
 
@@ -19,8 +19,8 @@ This project provides a neural network-based emulator for the MESA (Modules for 
 ## Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/<your-username>/<repository-name>.git
-   cd <repository-name>
+   git clone https://github.com/lorenzobranca/MESA-Emulator.git
+   cd MESA-Emulator
    ```
 2. Install the required libraries:
    ```bash
