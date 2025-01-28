@@ -3,7 +3,7 @@
 This project provides a neural network-based emulator for the MESA (Modules for Experiments in Stellar Astrophysics) code using DeepXDE. The emulator predicts stellar parameters (mass and radius) across evolutionary stages and analyzes their relative differences from ground truth values.
 
 ## Features
-- Neural network implementation using the DeepXDE library.
+- Neural Operator implementation using the DeepXDE library.
 - Data preprocessing with scaling and descaling functions.
 - Training and prediction modes for model evaluation.
 - Visualization of predictions with respect to true values using Matplotlib.
